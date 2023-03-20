@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>sample</title>
+    <script>
+        var socket = null;
+        // サーバーに接続 (一連の処理)
+        window.onload = function () {
+            socket = new WebSocket("ws://localhost:3000/ws/room1");
+            socket.onopen = function () {
+                console.log("system connnected")
+                updateMessage("システム", "接続しました！");
+            };
+            socket.onmessage = function (event) {
+                // サーバーからメッセージを受け取る
+                if (event.data instanceof Blob) {
+                    reader = new FileReader();
+
+                    reader.onload = () => {
+                        let txt = JSON.parse(reader.result)
+                        updateMessage(txt.name, txt.message)
+                    };
+
+                    reader.readAsText(event.data);
+                } else {
+                    console.log("Result: " + event.data);
+                }
+            };
+        };
+
+        // メッセージ欄を更新する
+        function updateMessage(name, message) {
+            let listName = document.createElement("li");
+            let nameText = document.createTextNode(name);
+            listName.appendChild(nameText);
+
+            let messages = document.createElement("ul");
+
+            let listMessage = document.createElement("li");
+            let messageText = document.createTextNode(message);
+            listMessage.appendChild(messageText);
+
+            messages.appendChild(listMessage);
+
+            listName.appendChild(messages);
+
+            let ul = document.getElementById("messages");
+            ul.appendChild(listName);
+        }
+
+        // サーバーにメッセージを送信する
+        function send() {
+            let sendName = document.getElementById("name");
+            let sendMessage = document.getElementById("message");
+            let msg = sendMessage.value;
+            let name = sendName.value;
+            if (msg == "" || name == "") {
+                return;
+            }
+            socket.send(JSON.stringify({
+                "Message": msg,
+                "Name": name
+            }));
+            sendMessage.value = "";
+        }
+        function enterRoom() {
+            if ( socket !== null && socket && socket.readyState === 1 ) socket.close() ;
+            let room = document.getElementById("selectroom");
+            socket = new WebSocket("ws://localhost:3000/ws/" + room.value);
+            socket.onopen = function () {
+                console.log("system connnected")
+                updateMessage("システム", "接続しました！");
+            };
+            socket.onmessage = function (event) {
+                // サーバーからメッセージを受け取る
+                if (event.data instanceof Blob) {
+                    reader = new FileReader();
+
+                    reader.onload = () => {
+                        console.log(typeof reader.result);
+                        let txt = JSON.parse(reader.result)
+                        updateMessage(txt.name, txt.message)
+                    };
+
+                    reader.readAsText(event.data);
+                } else {
+                    console.log("Result: " + event.data);
+                }
+            };
+        }
+    </script>
+</head>
+
+<body>
+    <!-- 送信欄 -->
+    <p>部屋を選択してください。</p>
+    <select name="roomselect" id="selectroom">
+        <option value="room1">ルーム1</option>
+        <option value="room2">ルーム2</option>
+    </select>
+    <button onclick="enterRoom()">入室</button>
+    <p>名前を入力してください。</p>
+    <input type="text" id="name" />
+    <p>メッセージを入力してください。</p>
+    <input type="text" id="message" /><button onclick="send()">送信</button>
+
+    <!-- メッセージ欄 -->
+    <p>メッセージ一覧</p>
+    <ul id="messages"></ul>
+
+</body>
+
+</html>
